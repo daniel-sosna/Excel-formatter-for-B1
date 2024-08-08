@@ -1,4 +1,4 @@
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
 
 DATE_COL = 'A'
 COUNTRY_COL = 'O'
@@ -27,14 +27,14 @@ class DataExtractor():
 	def __init__(self, sheet):
 		self.sheet = sheet
 		self.headers = [self.sheet[col+'1'].value for col in (DATE_COL, COUNTRY_COL, TOTAL_COL)]
-		print(f"Columns to parse: {self.headers[0]}, {self.headers[1]}, {self.headers[2]}")
+		print(f"Columns to parse: {self.headers[0]}, {self.headers[1]}, {self.headers[2]}\n")
 
 	def run(self, start=2, stop=None) -> tuple[list, bool]:
 		data = []
 		skipped_count = 0
 		error_count = 0
 
-		print("\nRunning:")
+		print("Running:")
 		for i, row in enumerate(self.sheet.iter_rows(min_row=start, values_only=True), start=start):
 			if stop and i > stop:
 				i -= 1
@@ -110,16 +110,39 @@ class DataExtractor():
 		print(f" └─ {n_rows_valid + n_errors} rows have been parsed.")
 		if n_errors:
 			print(f"     ├─ {n_rows_valid} rows have been saved.")
-			print(f"     └─ {n_errors} rows are invalid! Please fix all ❌ marks first.")
+			print(f"     └─ {n_errors} rows are invalid! Please fix all ❌ marks first.\n")
 		else:
 			print("All rows with data have been saved.")
-			print("No critical errors found. Going further...")
+			print("No critical errors found. Going further...\n")
+
+
+class DivideSalesByCountry():
+	def __init__(self, sales):
+		self.all = sales
+		self.eu = []
+		self.not_eu = []
+
+	def write_to_excel(self, filename):
+		workbook = Workbook()
+		self.write_to_sheet(self.all, workbook.active)
+		self.write_to_sheet(self.eu, workbook.create_sheet("ES"))
+		self.write_to_sheet(self.not_eu, workbook.create_sheet("ne ES"))
+		workbook.save(filename)
+
+	def write_to_sheet(self, sales, sheet):
+		for row in sales:
+			sheet.append(row)
 
 
 def main():
 	wb = LoadWorkbook('../EtsySoldOrders2024-7.xlsx')
 	ext = DataExtractor(wb.sheet)
 	data, status = ext.run()
+	if status:
+		sales = DivideSalesByCountry(data)
+		EU_sales, not_EU_sales = sales.eu, sales.not_eu
+		print(EU_sales, not_EU_sales)
+		sales.write_to_excel('sales.xlsx')
 
 if __name__ == '__main__':
 	main()
