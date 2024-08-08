@@ -1,4 +1,5 @@
 from openpyxl import load_workbook, Workbook
+from openpyxl.styles import Font, Color, Alignment
 from vat import EU_VAT
 
 DATE_COL = 'A'
@@ -148,12 +149,17 @@ class SplitSalesByCountry():
 	def write_to_excel(self, filename):
 		workbook = Workbook()
 		workbook.active.title = "Visi"
-		self.write_to_sheet(self.all, workbook.active)
-		self.write_to_sheet([(k, *v) for k, v in self.eu.items()], workbook.create_sheet("ES"))
-		self.write_to_sheet(self.not_eu, workbook.create_sheet("ne ES"))
+		self.write_to_sheet(workbook.active, self.all)
+		self.write_to_sheet(workbook.create_sheet("ES"), [(k, *v) for k, v in self.eu.items()], headers=("Date", "Total without VAT", "VAT", "Total"))
+		self.write_to_sheet(workbook.create_sheet("ne ES"), self.not_eu)
 		workbook.save(filename)
 
-	def write_to_sheet(self, sales, sheet):
+	def write_to_sheet(self, sheet, sales, headers=("Date", "Country", "Total")):
+		sheet.append(headers)
+		print(sheet[1])
+		for cell in sheet[1]:
+			cell.font = Font(bold=True)
+			cell.alignment = Alignment(horizontal="center")
 		for row in sales:
 			sheet.append(row)
 
