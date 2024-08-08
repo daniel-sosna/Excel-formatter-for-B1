@@ -120,9 +120,6 @@ def main():
 	wb = LoadWorkbook('../EtsySoldOrders2024-7.xlsx')
 	ext = DataExtractor(wb.sheet)
 	data, status = ext.run()
-	print(f"\nData:")
-	for (date, country, total) in data:
-		print(f"{date} | {country} | {total}")
 
 if __name__ == '__main__':
 	main()
