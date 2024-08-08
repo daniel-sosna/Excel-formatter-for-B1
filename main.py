@@ -1,4 +1,5 @@
 from openpyxl import load_workbook, Workbook
+from vat import EU_VAT
 
 DATE_COL = 'A'
 COUNTRY_COL = 'O'
@@ -116,16 +117,39 @@ class DataExtractor():
 			print("No critical errors found. Going further...\n")
 
 
-class DivideSalesByCountry():
+class SplitSalesByCountry():
+	eu = dict()
+	not_eu = list()
+	not_eu_countries = set()
+
 	def __init__(self, sales):
 		self.all = sales
-		self.eu = []
-		self.not_eu = []
+		self.split_sales()
+		self.count_vat_for_eu()
+
+	def count_vat_for_eu(self):
+		for country in self.eu.keys():
+			total = self.eu[country]
+			without_vat = total * 100 / (100 + EU_VAT[country])
+			vat = total * EU_VAT[country] / (100 + EU_VAT[country])
+			self.eu[country] = (without_vat, vat, total)
+
+	def split_sales(self):
+		for row in self.all:
+			country = row[1]
+			if country in EU_VAT.keys():
+				if country not in self.eu:
+					self.eu[country] = 0
+				self.eu[country] += row[2]
+			else:
+				self.not_eu.append(row)
+				self.not_eu_countries.add(country)
 
 	def write_to_excel(self, filename):
 		workbook = Workbook()
+		workbook.active.title = "Visi"
 		self.write_to_sheet(self.all, workbook.active)
-		self.write_to_sheet(self.eu, workbook.create_sheet("ES"))
+		self.write_to_sheet([(k, *v) for k, v in self.eu.items()], workbook.create_sheet("ES"))
 		self.write_to_sheet(self.not_eu, workbook.create_sheet("ne ES"))
 		workbook.save(filename)
 
@@ -133,15 +157,16 @@ class DivideSalesByCountry():
 		for row in sales:
 			sheet.append(row)
 
+		# TODO: Add sum to Excel
+
 
 def main():
 	wb = LoadWorkbook('../EtsySoldOrders2024-7.xlsx')
 	ext = DataExtractor(wb.sheet)
 	data, status = ext.run()
 	if status:
-		sales = DivideSalesByCountry(data)
+		sales = SplitSalesByCountry(data)
 		EU_sales, not_EU_sales = sales.eu, sales.not_eu
-		print(EU_sales, not_EU_sales)
 		sales.write_to_excel('sales.xlsx')
 
 if __name__ == '__main__':
