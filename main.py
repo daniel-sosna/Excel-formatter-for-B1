@@ -50,7 +50,7 @@ class DataExtractor():
 			else:
 				skipped_count += 1
 
-		self.print_results(len(data), error_count)
+		self.print_results(i - start + 1, len(data), skipped_count, error_count)
 		return sorted(data, key=lambda x: x[0]), True if not error_count else False
 
 	def get_row_data(self, i, row) -> tuple[tuple, bool] | tuple[None, False]:
@@ -103,14 +103,16 @@ class DataExtractor():
 			total
 		), is_row_valid
 
-	def print_results(self, n_rows, n_errors):
+	def print_results(self, n_rows_listened, n_rows_valid, n_rows_skipped, n_errors):
 		print("Results:")
-		print(f"{n_rows + n_errors} rows have been found.")
+		print(f"{n_rows_listened} rows have been listened.")
+		print(f" ├─ {n_rows_skipped} rows without data skipped.")
+		print(f" └─ {n_rows_valid + n_errors} rows have been parsed.")
 		if n_errors:
-			print(f" ├─ {n_rows} rows have been parsed.")
-			print(f" └─ {n_errors} rows are invalid! Please fix all ❌ marks first.")
+			print(f"     ├─ {n_rows_valid} rows have been saved.")
+			print(f"     └─ {n_errors} rows are invalid! Please fix all ❌ marks first.")
 		else:
-			print(f" └─ {n_rows} rows have been parsed.")
+			print("All rows with data have been saved.")
 			print("No critical errors found. Going further...")
 
 
