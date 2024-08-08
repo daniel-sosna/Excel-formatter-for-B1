@@ -20,15 +20,21 @@ print(f"Data from sheet '{sheet.title}'")
 headers = [sheet[col+'1'].value for col in (DATE_COL, COUNTRY_COL, TOTAL_COL)]
 print(f"Columns to parse: {headers[0]}, {headers[1]}, {headers[2]}")
 
+data = []
+error_count = 0
 print("\nRunning:")
 for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+	# Get needed columns data
 	date = row[col_to_ind(DATE_COL)]
 	country = row[col_to_ind(COUNTRY_COL)]
 	total = row[col_to_ind(TOTAL_COL)]
 
+	# If row is blank
 	if not (date or country or total):
 		print(f"✔ No data in row {i}. Skipped")
 		continue
+
+	is_row_valid = True
 
 	# [Sale Date]
 	if date:
@@ -38,12 +44,15 @@ for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
 		except Exception as e:
 			print(f"❌ [{DATE_COL}{i}] Incorrect '{headers[0]}' in row {i}: '{date}'")
 			new_date = date
+			is_row_valid = False
 	else:
 		print(f"❌ [{DATE_COL}{i}] No '{headers[0]}' in row {i}: ({date}, {country}, {total})")
+		is_row_valid = False
 
 	# [Ship Country]
 	if not country:
 		print(f"❌ [{COUNTRY_COL}{i}] No '{headers[1]}' in row {i}: ({date}, {country}, {total})")
+		is_row_valid = False
 
 	# [Order Total]
 	if total:
@@ -53,7 +62,27 @@ for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
 				print(f"✔ [{TOTAL_COL}{i}] Incorrect '{headers[2]}' in row {i}: '{old_total}'. Changed to '{total}'")
 			except Exception as e:
 				print(f"❌ [{TOTAL_COL}{i}] Incorrect '{headers[2]}' in row {i}: '{total}'. {type(e)}: {e}")
+				is_row_valid = False
 	else:
 		print(f"❌ [{TOTAL_COL}{i}] No '{headers[2]}' in row {i}: ({date}, {country}, {total})")
+		is_row_valid = False
 
-	print(f"{i}) {new_date if 'new_date' in locals() else date} | {country} | {total}")
+	if is_row_valid:
+		data.append((new_date if 'new_date' in locals() else date, country, total))
+	else:
+		error_count += 1
+
+print("Results:")
+print(f"{len(data) + error_count} rows have been found.")
+if error_count:
+	print(f" ├─ {len(data)} rows have been parsed.")
+	print(f" └─ {error_count} rows are invalid! Please fix all ❌ marks first.")
+else:
+	print(f" └─ {len(data)} rows have been parsed.")
+	print("No critical errors found. Going further...")
+
+data.sort(key=lambda x: x[0])
+
+print(f"\nData:")
+for (date, country, total) in data:
+	print(f"{date} | {country} | {total}")
