@@ -18,8 +18,14 @@ def col_to_ind(column:str, start:int=0) -> int:
 
 class LoadWorkbook():
 	def __init__(self, filename):
-		workbook = load_workbook(filename, read_only=True)
-		self.open_worksheet(workbook)
+		try:
+			workbook = load_workbook(filename, read_only=True)
+		except Exception as e:
+			self.sheet = None
+			print(f"Failed to open the \"{filename}\" file. See the error below:")
+			print(type(e), e)
+		else:
+			self.open_worksheet(workbook)
 
 	def open_worksheet(self, workbook):
 		self.sheet = workbook.active
@@ -147,14 +153,27 @@ class SplitSalesByCountry():
 				self.not_eu.append(row)
 				self.not_eu_countries.add(country)
 
-	def write_to_excel(self, filename):
+
+class WriteSalesToExcel():
+	def __init__(self, filename, sales, eu, not_eu):
+		self.all = sales
+		self.eu = eu
+		self.not_eu = not_eu
+		self.write(filename)
+
+	def write(self, filename):
 		workbook = Workbook()
 		workbook.active.title = "Visi"
 		self.write_to_sheet(workbook.active, self.all)
 		self.write_to_sheet(workbook.create_sheet("ES"), [(k, *v) for k, v in self.eu.items()],
 							headers=("Country", "Total without VAT", "VAT", "Total"), sum_start_from_header=2)
 		self.write_to_sheet(workbook.create_sheet("ne ES"), self.not_eu)
-		workbook.save(filename)
+		try:
+			workbook.save(filename)
+			print(f"Successfully saved sales into \"{filename}\"")
+		except Exception as e:
+			print(f"Failed to save sales. See the error below and close the \"{filename}\" file if it is open.")
+			print(type(e), e)
 
 	def write_to_sheet(self, sheet, sales, headers=("Date", "Country", "Total"), sum_start_from_header=3):
 		sheet.append(headers)
@@ -191,13 +210,15 @@ class SplitSalesByCountry():
 
 
 def main():
-	wb = LoadWorkbook('../EtsySoldOrders2024-7.xlsx')
+	wb = LoadWorkbook('EtsySoldOrders2024-7.xlsx')
+	if not wb.sheet:
+		return
 	ext = DataExtractor(wb.sheet)
 	data, status = ext.run()
 	if status:
 		sales = SplitSalesByCountry(data)
 		EU_sales, not_EU_sales = sales.eu, sales.not_eu
-		sales.write_to_excel('sales.xlsx')
+		WriteSalesToExcel('sales.xlsx', data, EU_sales, not_EU_sales)
 
 if __name__ == '__main__':
 	main()
