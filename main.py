@@ -152,7 +152,7 @@ class SplitSalesByCountry():
 		workbook.active.title = "Visi"
 		self.write_to_sheet(workbook.active, self.all)
 		self.write_to_sheet(workbook.create_sheet("ES"), [(k, *v) for k, v in self.eu.items()],
-							headers=("Date", "Total without VAT", "VAT", "Total"), sum_start_from_header=2)
+							headers=("Country", "Total without VAT", "VAT", "Total"), sum_start_from_header=2)
 		self.write_to_sheet(workbook.create_sheet("ne ES"), self.not_eu)
 		workbook.save(filename)
 
@@ -164,6 +164,7 @@ class SplitSalesByCountry():
 		for row in sales:
 			sheet.append(row)
 		self.add_sum_cells_to_sheet(sheet, len(sales), headers, sum_start_from_header)
+		self.align_columns_width(sheet, (get_column_letter(len(headers)+2)))
 
 	def add_sum_cells_to_sheet(self, sheet, n_sales, headers, start_header):
 		row = 1
@@ -178,6 +179,15 @@ class SplitSalesByCountry():
 			s_cell = sheet.cell(row=row, column=len(headers)+3)
 			s_cell.value = f'=SUM({get_column_letter(i)}{2}:{get_column_letter(i)}{n_sales+1})'
 			s_cell.font = Font(color="C00000")
+
+	def align_columns_width(self, sheet, columns=('E')):
+		max_width = 0
+		for col in columns:
+			for cell in sheet[col]:
+				if cell.value:
+					max_width = max(max_width, len(cell.value))
+			if max_width > sheet.column_dimensions[col].width:
+				sheet.column_dimensions[col].width = max_width
 
 
 def main():
