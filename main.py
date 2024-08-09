@@ -1,5 +1,6 @@
 from openpyxl import load_workbook, Workbook
-from openpyxl.styles import Font, Color, Alignment
+from openpyxl.utils.cell import get_column_letter
+from openpyxl.styles import Font, Alignment
 from vat import EU_VAT
 
 DATE_COL = 'A'
@@ -150,20 +151,33 @@ class SplitSalesByCountry():
 		workbook = Workbook()
 		workbook.active.title = "Visi"
 		self.write_to_sheet(workbook.active, self.all)
-		self.write_to_sheet(workbook.create_sheet("ES"), [(k, *v) for k, v in self.eu.items()], headers=("Date", "Total without VAT", "VAT", "Total"))
+		self.write_to_sheet(workbook.create_sheet("ES"), [(k, *v) for k, v in self.eu.items()],
+							headers=("Date", "Total without VAT", "VAT", "Total"), sum_start_from_header=2)
 		self.write_to_sheet(workbook.create_sheet("ne ES"), self.not_eu)
 		workbook.save(filename)
 
-	def write_to_sheet(self, sheet, sales, headers=("Date", "Country", "Total")):
+	def write_to_sheet(self, sheet, sales, headers=("Date", "Country", "Total"), sum_start_from_header=3):
 		sheet.append(headers)
-		print(sheet[1])
 		for cell in sheet[1]:
 			cell.font = Font(bold=True)
-			cell.alignment = Alignment(horizontal="center")
+			cell.alignment = Alignment(horizontal='center')
 		for row in sales:
 			sheet.append(row)
+		self.add_sum_cells_to_sheet(sheet, len(sales), headers, sum_start_from_header)
 
-		# TODO: Add sum to Excel
+	def add_sum_cells_to_sheet(self, sheet, n_sales, headers, start_header):
+		row = 1
+		for i, header in enumerate(headers[start_header-1:], start=start_header):
+			row += 1
+			# Header cell
+			h_cell = sheet.cell(row=row, column=len(headers)+2)
+			h_cell.value = header + ':'
+			h_cell.font = Font(bold=True, color="FF0000")
+			h_cell.alignment = Alignment(horizontal='center')
+			# Sum cell
+			s_cell = sheet.cell(row=row, column=len(headers)+3)
+			s_cell.value = f'=SUM({get_column_letter(i)}{2}:{get_column_letter(i)}{n_sales+1})'
+			s_cell.font = Font(color="C00000")
 
 
 def main():
