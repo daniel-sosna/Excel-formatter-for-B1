@@ -247,7 +247,12 @@ class FillOutTemplateFile():
 			for col, val in CONSTANTS.items():
 				sheet.cell(row=i+1, column=col_to_ind(col, 1)).value = val
 
-		wb.workbook.save(result_filename)
+		try:
+			wb.workbook.save(result_filename)
+			print(f"Successfully saved sales outside the EU using the template into \"{result_filename}\"")
+		except Exception as e:
+			print(f"Failed to save sales outside the EU using the template. See the error below and close the \"{result_filename}\" file if it is open.")
+			print(type(e), e)
 
 
 def main():
