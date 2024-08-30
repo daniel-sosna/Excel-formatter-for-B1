@@ -2,10 +2,9 @@ from openpyxl import load_workbook, Workbook
 from openpyxl.utils.cell import get_column_letter
 from openpyxl.styles import Font, Alignment
 from vat import EU_VAT
+from config import *
 
-DATE_COL = 'A'
-COUNTRY_COL = 'O'
-TOTAL_COL = 'X'
+SALES_MONTH = 8
 
 def col_to_ind(column:str, start:int=0) -> int:
 	''' Converts a column name (e.g. 'A', 'AF', 'CK') to an index '''
@@ -17,24 +16,22 @@ def col_to_ind(column:str, start:int=0) -> int:
 
 
 class LoadWorkbook():
-	def __init__(self, filename):
+	def __init__(self, filename, read_only=False):
 		try:
-			workbook = load_workbook(filename, read_only=True)
+			self.workbook = load_workbook(filename, read_only=read_only)
 		except Exception as e:
 			self.sheet = None
-			print(f"Failed to open the \"{filename}\" file. See the error below:")
+			print(f"Failed to open \"{filename}\". See the error below:")
 			print(type(e), e)
 		else:
-			self.open_worksheet(workbook)
-
-	def open_worksheet(self, workbook):
-		self.sheet = workbook.active
-		print(f"Data from sheet '{self.sheet.title}'")
+			print(f"Successfully opened \"{filename}\"")
+			self.sheet = self.workbook.active
 
 
 class DataExtractor():
 	def __init__(self, sheet):
 		self.sheet = sheet
+		print(f"Getting data from the sheet '{self.sheet.title}'")
 		self.headers = [self.sheet[col+'1'].value for col in (DATE_COL, COUNTRY_COL, TOTAL_COL)]
 		print(f"Columns to parse: {self.headers[0]}, {self.headers[1]}, {self.headers[2]}\n")
 
@@ -230,8 +227,36 @@ class WriteSalesToExcel():
 				sheet.column_dimensions[col].width = max_width
 
 
+class FillOutTemplateFile():
+	def __init__(self, template_filename, result_filename, sales):
+		self.sales = sales
+		self.fill(template_filename, result_filename)
+
+	def fill(self, template_filename, result_filename):
+		wb = LoadWorkbook(template_filename)
+		sheet = wb.sheet
+		if not sheet:
+			return
+
+		for i, (date, country, price) in enumerate(self.sales, start=1):
+			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['date'], 1)).value = date
+			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['number'], 1)).value = i
+			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['country'], 1)).value = country
+			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['price'], 1)).value = price
+
+			for col, val in CONSTANTS.items():
+				sheet.cell(row=i+1, column=col_to_ind(col, 1)).value = val
+
+		try:
+			wb.workbook.save(result_filename)
+			print(f"Successfully saved sales outside the EU using the template into \"{result_filename}\"")
+		except Exception as e:
+			print(f"Failed to save sales outside the EU using the template. See the error below and close the \"{result_filename}\" file if it is open.")
+			print(type(e), e)
+
+
 def main():
-	wb = LoadWorkbook('../EtsySoldOrders2024-7.xlsx')
+	wb = LoadWorkbook('../EtsySoldOrders2024-7.xlsx', True)
 	if not wb.sheet:
 		return
 	ext = DataExtractor(wb.sheet)
@@ -240,6 +265,7 @@ def main():
 		sales = SplitSalesByCountry(data)
 		EU_sales, not_EU_sales = sales.eu, sales.not_eu
 		WriteSalesToExcel('sales1.xlsx', data, EU_sales, not_EU_sales)
+		FillOutTemplateFile('../template.xlsx', 'result.xlsx', not_EU_sales)
 
 if __name__ == '__main__':
 	main()
