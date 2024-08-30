@@ -43,7 +43,7 @@ class DataExtractor():
 		skipped_count = 0
 		error_count = 0
 
-		print("Running:")
+		print("# Extracting sales:")
 		for i, row in enumerate(self.sheet.iter_rows(min_row=start, values_only=True), start=start):
 			if stop and i > stop:
 				i -= 1
@@ -113,7 +113,7 @@ class DataExtractor():
 		), is_row_valid
 
 	def print_results(self, n_rows_listened, n_rows_valid, n_rows_skipped, n_errors):
-		print("Results:")
+		print("# Extraction from Excel results:")
 		print(f"{n_rows_listened} rows have been listened.")
 		print(f" ├─ {n_rows_skipped} rows without data skipped.")
 		print(f" └─ {n_rows_valid + n_errors} rows have been parsed.")
@@ -128,19 +128,14 @@ class DataExtractor():
 class SplitSalesByCountry():
 	eu = dict()
 	not_eu = list()
-	not_eu_countries = set()
 
 	def __init__(self, sales):
 		self.all = sales
+		self.eu_countries = dict()
+		self.not_eu_countries = dict()
 		self.split_sales()
 		self.count_vat_for_eu()
-
-	def count_vat_for_eu(self):
-		for country in self.eu.keys():
-			total = self.eu[country]
-			without_vat = total * 100 / (100 + EU_VAT[country])
-			vat = total * EU_VAT[country] / (100 + EU_VAT[country])
-			self.eu[country] = (without_vat, vat, total)
+		self.print_results()
 
 	def split_sales(self):
 		for row in self.all:
@@ -149,9 +144,35 @@ class SplitSalesByCountry():
 				if country not in self.eu:
 					self.eu[country] = 0
 				self.eu[country] += row[2]
+				if country not in self.eu_countries:
+					self.eu_countries[country] = 0
+				self.eu_countries[country] += 1
 			else:
 				self.not_eu.append(row)
-				self.not_eu_countries.add(country)
+				if country not in self.not_eu_countries:
+					self.not_eu_countries[country] = 0
+				self.not_eu_countries[country] += 1
+
+	def count_vat_for_eu(self):
+		for country in self.eu.keys():
+			total = self.eu[country]
+			without_vat = total * 100 / (100 + EU_VAT[country])
+			vat = total * EU_VAT[country] / (100 + EU_VAT[country])
+			self.eu[country] = (without_vat, vat, total)
+
+	def print_results(self):
+		print("# Sales summary:")
+		self.print_countries("EU", self.eu_countries)
+		self.print_countries("not EU", self.not_eu_countries)
+		print()
+
+	def print_countries(self, title, countries):
+		total = 0
+		for n in countries.values():
+			total += n
+		print(f"{total} sales in {title} countries have been found. {len(countries)} countries in total:")
+		for country, n in sorted(countries.items(), key=lambda item: item[1], reverse=True):
+			print(f" ● {country} - {n}")
 
 
 class WriteSalesToExcel():
@@ -210,7 +231,7 @@ class WriteSalesToExcel():
 
 
 def main():
-	wb = LoadWorkbook('EtsySoldOrders2024-7.xlsx')
+	wb = LoadWorkbook('../EtsySoldOrders2024-7.xlsx')
 	if not wb.sheet:
 		return
 	ext = DataExtractor(wb.sheet)
@@ -218,7 +239,7 @@ def main():
 	if status:
 		sales = SplitSalesByCountry(data)
 		EU_sales, not_EU_sales = sales.eu, sales.not_eu
-		WriteSalesToExcel('sales.xlsx', data, EU_sales, not_EU_sales)
+		WriteSalesToExcel('sales1.xlsx', data, EU_sales, not_EU_sales)
 
 if __name__ == '__main__':
 	main()
