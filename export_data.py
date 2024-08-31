@@ -13,7 +13,7 @@ class LoadWorkbook():
 			self.workbook = load_workbook(filename, read_only=read_only)
 		except Exception as e:
 			self.sheet = None
-			print(f"🚨 Failed to open \"{filename}\". See the error below:")
+			print(f"[‼] Failed to open \"{filename}\". See the error below:")
 			print(type(e), e)
 		else:
 			print(f"Successfully opened \"{filename}\"")
@@ -36,9 +36,9 @@ class WriteSalesToExcel():
 		self.write_to_sheet(workbook.create_sheet("ne ES"), self.not_eu)
 		try:
 			workbook.save(filename)
-			print(f"📥︎ Successfully saved sales into \"{filename}\"")
+			print(f"[¤] Successfully saved sales into \"{filename}\"")
 		except Exception as e:
-			print(f"🚨 Failed to save sales. See the error below and close the \"{filename}\" file if it is open.")
+			print(f"[‼] Failed to save sales. See the error below and close the \"{filename}\" file if it is open.")
 			print(type(e), e)
 
 	def write_to_sheet(self, sheet, sales, headers=("Date", "Country", "Total"), sum_start_from_header=3):
@@ -97,29 +97,29 @@ class FillOutTemplateFile():
 
 		try:
 			wb.workbook.save(result_filename)
-			print(f"📥︎ Successfully saved sales outside the EU using the template into \"{result_filename}\"")
+			print(f"[¤] Successfully saved sales outside the EU using the template into \"{result_filename}\"")
 		except Exception as e:
-			print(f"🚨 Failed to save sales outside the EU using the template. See the error below and close the \"{result_filename}\" file if it is open.")
+			print(f"[‼] Failed to save sales outside the EU using the template. See the error below and close the \"{result_filename}\" file if it is open.")
 			print(type(e), e)
 
 
 class SaveData():
 	def __init__(self, all_sales, EU_sales, not_EU_sales):
 		print("# Saving modified sales data:")
-		print("↪ Enter the MONTH you want to appear in the output file names.")
+		print("[?] Enter the MONTH you want to appear in the output file names.")
 		print(f"Or press Enter to use the default value (which is the current month: {datetime.now().month}).")
-		month = input("≫ ")
-		print("↪ Enter the YEAR you want to appear in the output file names.")
+		month = input("» ")
+		print("[?] Enter the YEAR you want to appear in the output file names.")
 		print(f"Or press Enter to use the default value (which is the current year: {datetime.now().year}).")
-		year = input("≫ ")
+		year = input("» ")
 
 		SALES_MONTH = month if month else datetime.now().month
 		SALES_YEAR = year if month else datetime.now().year
 
 		WriteSalesToExcel(f'{SALES_OUTPUT}{SALES_YEAR}-{SALES_MONTH}.xlsx', all_sales, EU_sales, not_EU_sales)
 		
-		print("↪ Enter the path (filename if the file is in the same folder) to the TEMPLATE FILE or drag it into this window.")
+		print("[?] Enter the path (filename if the file is in the same folder) to the TEMPLATE FILE or drag it into this window.")
 		print(f"Or press Enter to use the default value (\"{TEMPLATE_PATH}\").")
-		template = input("≫ ")
+		template = input("» ")
 		template_filename = template if template else TEMPLATE_PATH
 		FillOutTemplateFile(template_filename, f'{TEMPLATE_OUTPUT}{SALES_YEAR}-{SALES_MONTH}.xlsx', not_EU_sales)

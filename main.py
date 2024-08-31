@@ -22,7 +22,7 @@ class DataExtractor():
 				i -= 1
 				break
 
-			row_data = self.get_row_data(row)
+			row_data = self.get_row_data(i, row)
 			if row_data:
 				checked_data, is_valid = self.check_data(i, *row_data)
 				if is_valid:
@@ -35,7 +35,7 @@ class DataExtractor():
 		self.print_results(i - start + 1, len(data), skipped_count, error_count)
 		return sorted(data, key=lambda x: x[0]), True if not error_count else False
 
-	def get_row_data(self, row) -> tuple | None:
+	def get_row_data(self, i, row) -> tuple | None:
 		# Get needed columns data
 		date = row[col_to_ind(DATE_COL)]
 		country = row[col_to_ind(COUNTRY_COL)]
@@ -43,7 +43,7 @@ class DataExtractor():
 
 		# Return None if row is blank
 		if not (date or country or total):
-			print(f"🎨 No data in row {i}. Skipped")
+			print(f" ~ No data in row {i}. Skipped")
 			return None
 
 		return (date, country, total)
@@ -58,15 +58,15 @@ class DataExtractor():
 				(months, day, year_tens) = date.split('/')
 				new_date = f'20{year_tens}-{months}-{day}'
 			except Exception as e:
-				print(f"❌ [{DATE_COL}{i}] Incorrect '{self.headers[0]}' in row {i}: '{date}'")
+				print(f" X [{DATE_COL}{i}] Incorrect '{self.headers[0]}' in row {i}: '{date}'")
 				is_row_valid = False
 		else:
-			print(f"❌ [{DATE_COL}{i}] No '{self.headers[0]}' in row {i}: ({date}, {country}, {total})")
+			print(f" X [{DATE_COL}{i}] No '{self.headers[0]}' in row {i}: ({date}, {country}, {total})")
 			is_row_valid = False
 
 		# [Ship Country]
 		if not country:
-			print(f"❌ [{COUNTRY_COL}{i}] No '{self.headers[1]}' in row {i}: ({date}, {country}, {total})")
+			print(f" X [{COUNTRY_COL}{i}] No '{self.headers[1]}' in row {i}: ({date}, {country}, {total})")
 			is_row_valid = False
 
 		# [Order Total]
@@ -74,12 +74,12 @@ class DataExtractor():
 			if isinstance(total, str):
 				try:
 					old_total, total = total, float(total.replace(',', ''))
-					print(f"🎨 [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{old_total}'. Changed to '{total}'")
+					print(f" ~ [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{old_total}'. Changed to '{total}'")
 				except Exception as e:
-					print(f"❌ [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{total}'. {type(e)}: {e}")
+					print(f" X [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{total}'. {type(e)}: {e}")
 					is_row_valid = False
 		else:
-			print(f"❌ [{TOTAL_COL}{i}] No '{self.headers[2]}' in row {i}: ({date}, {country}, {total})")
+			print(f" X [{TOTAL_COL}{i}] No '{self.headers[2]}' in row {i}: ({date}, {country}, {total})")
 			is_row_valid = False
 
 		return (new_date, country, total), is_row_valid
@@ -91,9 +91,9 @@ class DataExtractor():
 		print(f" └─ {n_rows_valid + n_errors} rows have been parsed.")
 		if n_errors:
 			print(f"     ├─ {n_rows_valid} rows have been saved.")
-			print(f"     └─ {n_errors} rows are invalid! Please fix all ❌ marks first.\n")
+			print(f"     └─ {n_errors} rows are invalid! Please fix all X marks first.\n")
 		else:
-			print("✔ All rows with data have been saved.")
+			print("[+] All rows with data have been saved.")
 			print("No critical errors found. Going further...\n")
 
 
@@ -148,8 +148,8 @@ class SplitSalesByCountry():
 
 
 def main():
-	print("↪ Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window:")
-	input_filename = input("≫ ")
+	print("[?] Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window:")
+	input_filename = input("» ")
 	wb = LoadWorkbook(input_filename, True)
 	if not wb.sheet:
 		return
@@ -162,3 +162,4 @@ def main():
 
 if __name__ == '__main__':
 	main()
+	input("\nPress Enter to exit...")
