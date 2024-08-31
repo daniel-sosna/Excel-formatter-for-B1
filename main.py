@@ -1,10 +1,10 @@
 from openpyxl import load_workbook, Workbook
 from openpyxl.utils.cell import get_column_letter
 from openpyxl.styles import Font, Alignment
+from datetime import datetime
 from vat import EU_VAT
 from config import *
 
-SALES_MONTH = 8
 
 def col_to_ind(column:str, start:int=0) -> int:
 	''' Converts a column name (e.g. 'A', 'AF', 'CK') to an index '''
@@ -21,7 +21,7 @@ class LoadWorkbook():
 			self.workbook = load_workbook(filename, read_only=read_only)
 		except Exception as e:
 			self.sheet = None
-			print(f"Failed to open \"{filename}\". See the error below:")
+			print(f"🚨 Failed to open \"{filename}\". See the error below:")
 			print(type(e), e)
 		else:
 			print(f"Successfully opened \"{filename}\"")
@@ -67,7 +67,7 @@ class DataExtractor():
 
 		# Return None if row is blank
 		if not (date or country or total):
-			print(f"✔ No data in row {i}. Skipped")
+			print(f"🎨 No data in row {i}. Skipped")
 			return None, False
 
 		is_row_valid = True
@@ -95,7 +95,7 @@ class DataExtractor():
 			if isinstance(total, str):
 				try:
 					old_total, total = total, float(total.replace(',', ''))
-					print(f"✔ [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{old_total}'. Changed to '{total}'")
+					print(f"🎨 [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{old_total}'. Changed to '{total}'")
 				except Exception as e:
 					print(f"❌ [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{total}'. {type(e)}: {e}")
 					is_row_valid = False
@@ -118,18 +118,18 @@ class DataExtractor():
 			print(f"     ├─ {n_rows_valid} rows have been saved.")
 			print(f"     └─ {n_errors} rows are invalid! Please fix all ❌ marks first.\n")
 		else:
-			print("All rows with data have been saved.")
+			print("✔ All rows with data have been saved.")
 			print("No critical errors found. Going further...\n")
 
 
 class SplitSalesByCountry():
 	eu = dict()
 	not_eu = list()
+	eu_countries = dict()
+	not_eu_countries = dict()
 
 	def __init__(self, sales):
 		self.all = sales
-		self.eu_countries = dict()
-		self.not_eu_countries = dict()
 		self.split_sales()
 		self.count_vat_for_eu()
 		self.print_results()
@@ -188,9 +188,9 @@ class WriteSalesToExcel():
 		self.write_to_sheet(workbook.create_sheet("ne ES"), self.not_eu)
 		try:
 			workbook.save(filename)
-			print(f"Successfully saved sales into \"{filename}\"")
+			print(f"📥︎ Successfully saved sales into \"{filename}\"")
 		except Exception as e:
-			print(f"Failed to save sales. See the error below and close the \"{filename}\" file if it is open.")
+			print(f"🚨 Failed to save sales. See the error below and close the \"{filename}\" file if it is open.")
 			print(type(e), e)
 
 	def write_to_sheet(self, sheet, sales, headers=("Date", "Country", "Total"), sum_start_from_header=3):
@@ -249,14 +249,19 @@ class FillOutTemplateFile():
 
 		try:
 			wb.workbook.save(result_filename)
-			print(f"Successfully saved sales outside the EU using the template into \"{result_filename}\"")
+			print(f"📥︎ Successfully saved sales outside the EU using the template into \"{result_filename}\"")
 		except Exception as e:
-			print(f"Failed to save sales outside the EU using the template. See the error below and close the \"{result_filename}\" file if it is open.")
+			print(f"🚨 Failed to save sales outside the EU using the template. See the error below and close the \"{result_filename}\" file if it is open.")
 			print(type(e), e)
 
 
 def main():
-	wb = LoadWorkbook('../EtsySoldOrders2024-7.xlsx', True)
+	month = input(f"↪ Enter the MONTH you want to appear in the output file names. Or press Enter to use the default value (which is the current month: {datetime.now().month}). ")
+	year = input(f"↪ Enter the YEAR you want to appear in the output file names. Or press Enter to use the default value (which is the current year: {datetime.now().year}). ")
+	SALES_MONTH = month if month else datetime.now().month
+	SALES_YEAR = year if month else datetime.now().year
+	input_filename = input("↪ Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window: ")
+	wb = LoadWorkbook(input_filename, True)
 	if not wb.sheet:
 		return
 	ext = DataExtractor(wb.sheet)
@@ -264,8 +269,11 @@ def main():
 	if status:
 		sales = SplitSalesByCountry(data)
 		EU_sales, not_EU_sales = sales.eu, sales.not_eu
-		WriteSalesToExcel('sales1.xlsx', data, EU_sales, not_EU_sales)
-		FillOutTemplateFile('../template.xlsx', 'result.xlsx', not_EU_sales)
+		WriteSalesToExcel(f'pardavimai_{SALES_YEAR}-{SALES_MONTH}.xlsx', data, EU_sales, not_EU_sales)
+		template = input("↪ Enter the path (filename if the file is in the same folder) to the TEMPLATE FILE or drag it into this window. Or press Enter to use the default value (\"template.xlsx\"). ")
+		template_filename = template if template else 'template.xlsx'
+		FillOutTemplateFile(template_filename, f'b1_import_{SALES_YEAR}-{SALES_MONTH}.xlsx', not_EU_sales)
+
 
 if __name__ == '__main__':
 	main()
