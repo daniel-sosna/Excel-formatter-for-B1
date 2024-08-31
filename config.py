@@ -2,6 +2,10 @@ DATE_COL = 'A'
 COUNTRY_COL = 'O'
 TOTAL_COL = 'X'
 
+TEMPLATE_PATH = 'template.xlsx'
+SALES_OUTPUT = 'pardavimai_'
+TEMPLATE_OUTPUT = 'b1_import_'
+
 VARIABLES = {
 	'date': 'A',
 	'number': 'D',

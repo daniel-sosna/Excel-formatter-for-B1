@@ -1,31 +1,7 @@
-from openpyxl import load_workbook, Workbook
-from openpyxl.utils.cell import get_column_letter
-from openpyxl.styles import Font, Alignment
-from datetime import datetime
+from utils import col_to_ind
+from export_data import LoadWorkbook, SaveData
 from vat import EU_VAT
-from config import *
-
-
-def col_to_ind(column:str, start:int=0) -> int:
-	''' Converts a column name (e.g. 'A', 'AF', 'CK') to an index '''
-	index = start - 1
-	for i, letter in enumerate(column[::-1]): # Run through reversed column name
-		index += (ord(letter) - ord('A') + 1) * 26**i
-	# 'ABC'  ->  'CBA'  ->  'A'*(26^2) + 'B'*(26^1) + 'C'*(26^0)  ->  1*676 + 2*26 + 3*1  ->  731
-	return index
-
-
-class LoadWorkbook():
-	def __init__(self, filename, read_only=False):
-		try:
-			self.workbook = load_workbook(filename, read_only=read_only)
-		except Exception as e:
-			self.sheet = None
-			print(f"🚨 Failed to open \"{filename}\". See the error below:")
-			print(type(e), e)
-		else:
-			print(f"Successfully opened \"{filename}\"")
-			self.sheet = self.workbook.active
+from config import DATE_COL, COUNTRY_COL, TOTAL_COL
 
 
 class DataExtractor():
@@ -172,94 +148,7 @@ class SplitSalesByCountry():
 			print(f" ● {country} - {n}")
 
 
-class WriteSalesToExcel():
-	def __init__(self, filename, sales, eu, not_eu):
-		self.all = sales
-		self.eu = eu
-		self.not_eu = not_eu
-		self.write(filename)
-
-	def write(self, filename):
-		workbook = Workbook()
-		workbook.active.title = "Visi"
-		self.write_to_sheet(workbook.active, self.all)
-		self.write_to_sheet(workbook.create_sheet("ES"), [(k, *v) for k, v in self.eu.items()],
-							headers=("Country", "Total without VAT", "VAT", "Total"), sum_start_from_header=2)
-		self.write_to_sheet(workbook.create_sheet("ne ES"), self.not_eu)
-		try:
-			workbook.save(filename)
-			print(f"📥︎ Successfully saved sales into \"{filename}\"")
-		except Exception as e:
-			print(f"🚨 Failed to save sales. See the error below and close the \"{filename}\" file if it is open.")
-			print(type(e), e)
-
-	def write_to_sheet(self, sheet, sales, headers=("Date", "Country", "Total"), sum_start_from_header=3):
-		sheet.append(headers)
-		for cell in sheet[1]:
-			cell.font = Font(bold=True)
-			cell.alignment = Alignment(horizontal='center')
-		for row in sales:
-			sheet.append(row)
-		self.add_sum_cells_to_sheet(sheet, len(sales), headers, sum_start_from_header)
-		self.align_columns_width(sheet, (get_column_letter(len(headers)+2)))
-
-	def add_sum_cells_to_sheet(self, sheet, n_sales, headers, start_header):
-		row = 1
-		for i, header in enumerate(headers[start_header-1:], start=start_header):
-			row += 1
-			# Header cell
-			h_cell = sheet.cell(row=row, column=len(headers)+2)
-			h_cell.value = header + ':'
-			h_cell.font = Font(bold=True, color="FF0000")
-			h_cell.alignment = Alignment(horizontal='center')
-			# Sum cell
-			s_cell = sheet.cell(row=row, column=len(headers)+3)
-			s_cell.value = f'=SUM({get_column_letter(i)}{2}:{get_column_letter(i)}{n_sales+1})'
-			s_cell.font = Font(color="C00000")
-
-	def align_columns_width(self, sheet, columns=('E')):
-		max_width = 0
-		for col in columns:
-			for cell in sheet[col]:
-				if cell.value:
-					max_width = max(max_width, len(cell.value))
-			if max_width > sheet.column_dimensions[col].width:
-				sheet.column_dimensions[col].width = max_width
-
-
-class FillOutTemplateFile():
-	def __init__(self, template_filename, result_filename, sales):
-		self.sales = sales
-		self.fill(template_filename, result_filename)
-
-	def fill(self, template_filename, result_filename):
-		wb = LoadWorkbook(template_filename)
-		sheet = wb.sheet
-		if not sheet:
-			return
-
-		for i, (date, country, price) in enumerate(self.sales, start=1):
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['date'], 1)).value = date
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['number'], 1)).value = i
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['country'], 1)).value = country
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['price'], 1)).value = price
-
-			for col, val in CONSTANTS.items():
-				sheet.cell(row=i+1, column=col_to_ind(col, 1)).value = val
-
-		try:
-			wb.workbook.save(result_filename)
-			print(f"📥︎ Successfully saved sales outside the EU using the template into \"{result_filename}\"")
-		except Exception as e:
-			print(f"🚨 Failed to save sales outside the EU using the template. See the error below and close the \"{result_filename}\" file if it is open.")
-			print(type(e), e)
-
-
 def main():
-	month = input(f"↪ Enter the MONTH you want to appear in the output file names. Or press Enter to use the default value (which is the current month: {datetime.now().month}). ")
-	year = input(f"↪ Enter the YEAR you want to appear in the output file names. Or press Enter to use the default value (which is the current year: {datetime.now().year}). ")
-	SALES_MONTH = month if month else datetime.now().month
-	SALES_YEAR = year if month else datetime.now().year
 	input_filename = input("↪ Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window: ")
 	wb = LoadWorkbook(input_filename, True)
 	if not wb.sheet:
@@ -268,11 +157,7 @@ def main():
 	data, status = ext.run()
 	if status:
 		sales = SplitSalesByCountry(data)
-		EU_sales, not_EU_sales = sales.eu, sales.not_eu
-		WriteSalesToExcel(f'pardavimai_{SALES_YEAR}-{SALES_MONTH}.xlsx', data, EU_sales, not_EU_sales)
-		template = input("↪ Enter the path (filename if the file is in the same folder) to the TEMPLATE FILE or drag it into this window. Or press Enter to use the default value (\"template.xlsx\"). ")
-		template_filename = template if template else 'template.xlsx'
-		FillOutTemplateFile(template_filename, f'b1_import_{SALES_YEAR}-{SALES_MONTH}.xlsx', not_EU_sales)
+		SaveData(data, sales.eu, sales.not_eu)
 
 
 if __name__ == '__main__':
