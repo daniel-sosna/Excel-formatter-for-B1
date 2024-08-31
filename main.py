@@ -1,31 +1,7 @@
-from openpyxl import load_workbook, Workbook
-from openpyxl.utils.cell import get_column_letter
-from openpyxl.styles import Font, Alignment
+from utils import col_to_ind
+from export_data import LoadWorkbook, SaveData
 from vat import EU_VAT
-from config import *
-
-SALES_MONTH = 8
-
-def col_to_ind(column:str, start:int=0) -> int:
-	''' Converts a column name (e.g. 'A', 'AF', 'CK') to an index '''
-	index = start - 1
-	for i, letter in enumerate(column[::-1]): # Run through reversed column name
-		index += (ord(letter) - ord('A') + 1) * 26**i
-	# 'ABC'  ->  'CBA'  ->  'A'*(26^2) + 'B'*(26^1) + 'C'*(26^0)  ->  1*676 + 2*26 + 3*1  ->  731
-	return index
-
-
-class LoadWorkbook():
-	def __init__(self, filename, read_only=False):
-		try:
-			self.workbook = load_workbook(filename, read_only=read_only)
-		except Exception as e:
-			self.sheet = None
-			print(f"Failed to open \"{filename}\". See the error below:")
-			print(type(e), e)
-		else:
-			print(f"Successfully opened \"{filename}\"")
-			self.sheet = self.workbook.active
+from config import DATE_COL, COUNTRY_COL, TOTAL_COL
 
 
 class DataExtractor():
@@ -46,20 +22,20 @@ class DataExtractor():
 				i -= 1
 				break
 
-			row_data, is_valid = self.get_row_data(i, row)
-
-			# Save modified row data if valid
-			if is_valid:
-				data.append(row_data)
-			elif row_data:
-				error_count += 1
+			row_data = self.get_row_data(i, row)
+			if row_data:
+				checked_data, is_valid = self.check_data(i, *row_data)
+				if is_valid:
+					data.append(checked_data)
+				else:
+					error_count += 1
 			else:
 				skipped_count += 1
 
 		self.print_results(i - start + 1, len(data), skipped_count, error_count)
 		return sorted(data, key=lambda x: x[0]), True if not error_count else False
 
-	def get_row_data(self, i, row) -> tuple[tuple, bool] | tuple[None, False]:
+	def get_row_data(self, i, row) -> tuple | None:
 		# Get needed columns data
 		date = row[col_to_ind(DATE_COL)]
 		country = row[col_to_ind(COUNTRY_COL)]
@@ -67,27 +43,30 @@ class DataExtractor():
 
 		# Return None if row is blank
 		if not (date or country or total):
-			print(f"✔ No data in row {i}. Skipped")
-			return None, False
+			print(f" ~ No data in row {i}. Skipped")
+			return None
 
+		return (date, country, total)
+
+	def check_data(self, i, date, country, total) -> tuple[tuple, bool]:
 		is_row_valid = True
 
 		# [Sale Date]
+		new_date = date
 		if date:
 			try:
 				(months, day, year_tens) = date.split('/')
 				new_date = f'20{year_tens}-{months}-{day}'
 			except Exception as e:
-				print(f"❌ [{DATE_COL}{i}] Incorrect '{self.headers[0]}' in row {i}: '{date}'")
-				new_date = date
+				print(f" X [{DATE_COL}{i}] Incorrect '{self.headers[0]}' in row {i}: '{date}'")
 				is_row_valid = False
 		else:
-			print(f"❌ [{DATE_COL}{i}] No '{self.headers[0]}' in row {i}: ({date}, {country}, {total})")
+			print(f" X [{DATE_COL}{i}] No '{self.headers[0]}' in row {i}: ({date}, {country}, {total})")
 			is_row_valid = False
 
 		# [Ship Country]
 		if not country:
-			print(f"❌ [{COUNTRY_COL}{i}] No '{self.headers[1]}' in row {i}: ({date}, {country}, {total})")
+			print(f" X [{COUNTRY_COL}{i}] No '{self.headers[1]}' in row {i}: ({date}, {country}, {total})")
 			is_row_valid = False
 
 		# [Order Total]
@@ -95,19 +74,15 @@ class DataExtractor():
 			if isinstance(total, str):
 				try:
 					old_total, total = total, float(total.replace(',', ''))
-					print(f"✔ [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{old_total}'. Changed to '{total}'")
+					print(f" ~ [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{old_total}'. Changed to '{total}'")
 				except Exception as e:
-					print(f"❌ [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{total}'. {type(e)}: {e}")
+					print(f" X [{TOTAL_COL}{i}] Incorrect '{self.headers[2]}' in row {i}: '{total}'. {type(e)}: {e}")
 					is_row_valid = False
 		else:
-			print(f"❌ [{TOTAL_COL}{i}] No '{self.headers[2]}' in row {i}: ({date}, {country}, {total})")
+			print(f" X [{TOTAL_COL}{i}] No '{self.headers[2]}' in row {i}: ({date}, {country}, {total})")
 			is_row_valid = False
 
-		return (
-			new_date if 'new_date' in locals() else date,
-			country,
-			total
-		), is_row_valid
+		return (new_date, country, total), is_row_valid
 
 	def print_results(self, n_rows_listened, n_rows_valid, n_rows_skipped, n_errors):
 		print("# Extraction from Excel results:")
@@ -116,20 +91,21 @@ class DataExtractor():
 		print(f" └─ {n_rows_valid + n_errors} rows have been parsed.")
 		if n_errors:
 			print(f"     ├─ {n_rows_valid} rows have been saved.")
-			print(f"     └─ {n_errors} rows are invalid! Please fix all ❌ marks first.\n")
+			print(f"     └─ {n_errors} rows are invalid!")
+			print("[!] Please fix all X marks first.\n")
 		else:
-			print("All rows with data have been saved.")
+			print("[+] All rows with data have been saved.")
 			print("No critical errors found. Going further...\n")
 
 
 class SplitSalesByCountry():
 	eu = dict()
 	not_eu = list()
+	eu_countries = dict()
+	not_eu_countries = dict()
 
 	def __init__(self, sales):
 		self.all = sales
-		self.eu_countries = dict()
-		self.not_eu_countries = dict()
 		self.split_sales()
 		self.count_vat_for_eu()
 		self.print_results()
@@ -172,100 +148,17 @@ class SplitSalesByCountry():
 			print(f" ● {country} - {n}")
 
 
-class WriteSalesToExcel():
-	def __init__(self, filename, sales, eu, not_eu):
-		self.all = sales
-		self.eu = eu
-		self.not_eu = not_eu
-		self.write(filename)
-
-	def write(self, filename):
-		workbook = Workbook()
-		workbook.active.title = "Visi"
-		self.write_to_sheet(workbook.active, self.all)
-		self.write_to_sheet(workbook.create_sheet("ES"), [(k, *v) for k, v in self.eu.items()],
-							headers=("Country", "Total without VAT", "VAT", "Total"), sum_start_from_header=2)
-		self.write_to_sheet(workbook.create_sheet("ne ES"), self.not_eu)
-		try:
-			workbook.save(filename)
-			print(f"Successfully saved sales into \"{filename}\"")
-		except Exception as e:
-			print(f"Failed to save sales. See the error below and close the \"{filename}\" file if it is open.")
-			print(type(e), e)
-
-	def write_to_sheet(self, sheet, sales, headers=("Date", "Country", "Total"), sum_start_from_header=3):
-		sheet.append(headers)
-		for cell in sheet[1]:
-			cell.font = Font(bold=True)
-			cell.alignment = Alignment(horizontal='center')
-		for row in sales:
-			sheet.append(row)
-		self.add_sum_cells_to_sheet(sheet, len(sales), headers, sum_start_from_header)
-		self.align_columns_width(sheet, (get_column_letter(len(headers)+2)))
-
-	def add_sum_cells_to_sheet(self, sheet, n_sales, headers, start_header):
-		row = 1
-		for i, header in enumerate(headers[start_header-1:], start=start_header):
-			row += 1
-			# Header cell
-			h_cell = sheet.cell(row=row, column=len(headers)+2)
-			h_cell.value = header + ':'
-			h_cell.font = Font(bold=True, color="FF0000")
-			h_cell.alignment = Alignment(horizontal='center')
-			# Sum cell
-			s_cell = sheet.cell(row=row, column=len(headers)+3)
-			s_cell.value = f'=SUM({get_column_letter(i)}{2}:{get_column_letter(i)}{n_sales+1})'
-			s_cell.font = Font(color="C00000")
-
-	def align_columns_width(self, sheet, columns=('E')):
-		max_width = 0
-		for col in columns:
-			for cell in sheet[col]:
-				if cell.value:
-					max_width = max(max_width, len(cell.value))
-			if max_width > sheet.column_dimensions[col].width:
-				sheet.column_dimensions[col].width = max_width
-
-
-class FillOutTemplateFile():
-	def __init__(self, template_filename, result_filename, sales):
-		self.sales = sales
-		self.fill(template_filename, result_filename)
-
-	def fill(self, template_filename, result_filename):
-		wb = LoadWorkbook(template_filename)
-		sheet = wb.sheet
-		if not sheet:
-			return
-
-		for i, (date, country, price) in enumerate(self.sales, start=1):
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['date'], 1)).value = date
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['number'], 1)).value = i
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['country'], 1)).value = country
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['price'], 1)).value = price
-
-			for col, val in CONSTANTS.items():
-				sheet.cell(row=i+1, column=col_to_ind(col, 1)).value = val
-
-		try:
-			wb.workbook.save(result_filename)
-			print(f"Successfully saved sales outside the EU using the template into \"{result_filename}\"")
-		except Exception as e:
-			print(f"Failed to save sales outside the EU using the template. See the error below and close the \"{result_filename}\" file if it is open.")
-			print(type(e), e)
-
-
 def main():
-	wb = LoadWorkbook('../EtsySoldOrders2024-7.xlsx', True)
-	if not wb.sheet:
-		return
+	print("[?] Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window:")
+	input_filename = input("» ")
+	wb = LoadWorkbook(input_filename, True)
 	ext = DataExtractor(wb.sheet)
 	data, status = ext.run()
 	if status:
 		sales = SplitSalesByCountry(data)
-		EU_sales, not_EU_sales = sales.eu, sales.not_eu
-		WriteSalesToExcel('sales1.xlsx', data, EU_sales, not_EU_sales)
-		FillOutTemplateFile('../template.xlsx', 'result.xlsx', not_EU_sales)
+		SaveData(data, sales.eu, sales.not_eu)
+
 
 if __name__ == '__main__':
 	main()
+	input("\nPress Enter to exit...")
