@@ -105,12 +105,21 @@ class FillOutTemplateFile():
 
 class SaveData():
 	def __init__(self, all_sales, EU_sales, not_EU_sales):
-		month = input(f"↪ Enter the MONTH you want to appear in the output file names. Or press Enter to use the default value (which is the current month: {datetime.now().month}). ")
-		year = input(f"↪ Enter the YEAR you want to appear in the output file names. Or press Enter to use the default value (which is the current year: {datetime.now().year}). ")
+		print("# Saving modified sales data:")
+		print("↪ Enter the MONTH you want to appear in the output file names.")
+		print(f"Or press Enter to use the default value (which is the current month: {datetime.now().month}).")
+		month = input("≫ ")
+		print("↪ Enter the YEAR you want to appear in the output file names.")
+		print(f"Or press Enter to use the default value (which is the current year: {datetime.now().year}).")
+		year = input("≫ ")
+
 		SALES_MONTH = month if month else datetime.now().month
 		SALES_YEAR = year if month else datetime.now().year
 
 		WriteSalesToExcel(f'{SALES_OUTPUT}{SALES_YEAR}-{SALES_MONTH}.xlsx', all_sales, EU_sales, not_EU_sales)
-		template = input(f"↪ Enter the path (filename if the file is in the same folder) to the TEMPLATE FILE or drag it into this window. Or press Enter to use the default value (\"{TEMPLATE_PATH}\"). ")
+		
+		print("↪ Enter the path (filename if the file is in the same folder) to the TEMPLATE FILE or drag it into this window.")
+		print(f"Or press Enter to use the default value (\"{TEMPLATE_PATH}\").")
+		template = input("≫ ")
 		template_filename = template if template else TEMPLATE_PATH
 		FillOutTemplateFile(template_filename, f'{TEMPLATE_OUTPUT}{SALES_YEAR}-{SALES_MONTH}.xlsx', not_EU_sales)

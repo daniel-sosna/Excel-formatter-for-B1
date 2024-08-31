@@ -148,7 +148,8 @@ class SplitSalesByCountry():
 
 
 def main():
-	input_filename = input("↪ Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window: ")
+	print("↪ Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window:")
+	input_filename = input("≫ ")
 	wb = LoadWorkbook(input_filename, True)
 	if not wb.sheet:
 		return
