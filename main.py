@@ -22,20 +22,20 @@ class DataExtractor():
 				i -= 1
 				break
 
-			row_data, is_valid = self.get_row_data(i, row)
-
-			# Save modified row data if valid
-			if is_valid:
-				data.append(row_data)
-			elif row_data:
-				error_count += 1
+			row_data = self.get_row_data(row)
+			if row_data:
+				checked_data, is_valid = self.check_data(i, *row_data)
+				if is_valid:
+					data.append(checked_data)
+				else:
+					error_count += 1
 			else:
 				skipped_count += 1
 
 		self.print_results(i - start + 1, len(data), skipped_count, error_count)
 		return sorted(data, key=lambda x: x[0]), True if not error_count else False
 
-	def get_row_data(self, i, row) -> tuple[tuple, bool] | tuple[None, False]:
+	def get_row_data(self, row) -> tuple | None:
 		# Get needed columns data
 		date = row[col_to_ind(DATE_COL)]
 		country = row[col_to_ind(COUNTRY_COL)]
@@ -44,18 +44,21 @@ class DataExtractor():
 		# Return None if row is blank
 		if not (date or country or total):
 			print(f"🎨 No data in row {i}. Skipped")
-			return None, False
+			return None
 
+		return (date, country, total)
+
+	def check_data(self, i, date, country, total) -> tuple[tuple, bool]:
 		is_row_valid = True
 
 		# [Sale Date]
+		new_date = date
 		if date:
 			try:
 				(months, day, year_tens) = date.split('/')
 				new_date = f'20{year_tens}-{months}-{day}'
 			except Exception as e:
 				print(f"❌ [{DATE_COL}{i}] Incorrect '{self.headers[0]}' in row {i}: '{date}'")
-				new_date = date
 				is_row_valid = False
 		else:
 			print(f"❌ [{DATE_COL}{i}] No '{self.headers[0]}' in row {i}: ({date}, {country}, {total})")
@@ -79,11 +82,7 @@ class DataExtractor():
 			print(f"❌ [{TOTAL_COL}{i}] No '{self.headers[2]}' in row {i}: ({date}, {country}, {total})")
 			is_row_valid = False
 
-		return (
-			new_date if 'new_date' in locals() else date,
-			country,
-			total
-		), is_row_valid
+		return (new_date, country, total), is_row_valid
 
 	def print_results(self, n_rows_listened, n_rows_valid, n_rows_skipped, n_errors):
 		print("# Extraction from Excel results:")
