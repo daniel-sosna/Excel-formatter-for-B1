@@ -91,7 +91,8 @@ class DataExtractor():
 		print(f" └─ {n_rows_valid + n_errors} rows have been parsed.")
 		if n_errors:
 			print(f"     ├─ {n_rows_valid} rows have been saved.")
-			print(f"     └─ {n_errors} rows are invalid! Please fix all X marks first.\n")
+			print(f"     └─ {n_errors} rows are invalid!")
+			print("[!] Please fix all X marks first.\n")
 		else:
 			print("[+] All rows with data have been saved.")
 			print("No critical errors found. Going further...\n")
@@ -151,8 +152,6 @@ def main():
 	print("[?] Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window:")
 	input_filename = input("» ")
 	wb = LoadWorkbook(input_filename, True)
-	if not wb.sheet:
-		return
 	ext = DataExtractor(wb.sheet)
 	data, status = ext.run()
 	if status:

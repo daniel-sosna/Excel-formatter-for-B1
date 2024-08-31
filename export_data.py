@@ -3,21 +3,26 @@ from openpyxl.utils.cell import get_column_letter
 from openpyxl.styles import Font, Alignment
 from datetime import datetime
 
-from utils import col_to_ind
+from utils import col_to_ind, try_save_wb
 from config import *
 
 
 class LoadWorkbook():
 	def __init__(self, filename, read_only=False):
-		try:
-			self.workbook = load_workbook(filename, read_only=read_only)
-		except Exception as e:
-			self.sheet = None
-			print(f"[‼] Failed to open \"{filename}\". See the error below:")
-			print(type(e), e)
-		else:
-			print(f"Successfully opened \"{filename}\"")
-			self.sheet = self.workbook.active
+		while True:
+			try:
+				self.workbook = load_workbook(filename, read_only=read_only)
+			except Exception as e:
+				print(f"[‼] Failed to open \"{filename}\". See the error below and close the file if it is open.")
+				print(type(e), e)
+				print("\nPlease press Enter to try again or enter other filename:")
+				new_filename = input("» ")
+				if new_filename:
+					filename = new_filename
+			else:
+				print(f"Successfully opened \"{filename}\"")
+				self.sheet = self.workbook.active
+				break
 
 
 class WriteSalesToExcel():
@@ -34,12 +39,7 @@ class WriteSalesToExcel():
 		self.write_to_sheet(workbook.create_sheet("ES"), [(k, *v) for k, v in self.eu.items()],
 							headers=("Country", "Total without VAT", "VAT", "Total"), sum_start_from_header=2)
 		self.write_to_sheet(workbook.create_sheet("ne ES"), self.not_eu)
-		try:
-			workbook.save(filename)
-			print(f"[¤] Successfully saved sales into \"{filename}\"")
-		except Exception as e:
-			print(f"[‼] Failed to save sales. See the error below and close the \"{filename}\" file if it is open.")
-			print(type(e), e)
+		try_save_wb(workbook, "sales", filename)
 
 	def write_to_sheet(self, sheet, sales, headers=("Date", "Country", "Total"), sum_start_from_header=3):
 		sheet.append(headers)
@@ -82,25 +82,17 @@ class FillOutTemplateFile():
 
 	def fill(self, template_filename, result_filename):
 		wb = LoadWorkbook(template_filename)
-		sheet = wb.sheet
-		if not sheet:
-			return
 
 		for i, (date, country, price) in enumerate(self.sales, start=1):
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['date'], 1)).value = date
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['number'], 1)).value = i
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['country'], 1)).value = country
-			sheet.cell(row=i+1, column=col_to_ind(VARIABLES['price'], 1)).value = price
+			wb.sheet.cell(row=i+1, column=col_to_ind(VARIABLES['date'], 1)).value = date
+			wb.sheet.cell(row=i+1, column=col_to_ind(VARIABLES['number'], 1)).value = i
+			wb.sheet.cell(row=i+1, column=col_to_ind(VARIABLES['country'], 1)).value = country
+			wb.sheet.cell(row=i+1, column=col_to_ind(VARIABLES['price'], 1)).value = price
 
 			for col, val in CONSTANTS.items():
-				sheet.cell(row=i+1, column=col_to_ind(col, 1)).value = val
+				wb.sheet.cell(row=i+1, column=col_to_ind(col, 1)).value = val
 
-		try:
-			wb.workbook.save(result_filename)
-			print(f"[¤] Successfully saved sales outside the EU using the template into \"{result_filename}\"")
-		except Exception as e:
-			print(f"[‼] Failed to save sales outside the EU using the template. See the error below and close the \"{result_filename}\" file if it is open.")
-			print(type(e), e)
+		try_save_wb(wb.workbook, "sales outside the EU using the template", result_filename)
 
 
 class SaveData():
