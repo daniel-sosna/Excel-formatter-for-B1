@@ -7,7 +7,9 @@ if not os.path.exists(CONFIG_FOLDER):
 	os.makedirs(CONFIG_FOLDER)
 
 config = ConfigParser()
+config.optionxform = str
 vat = ConfigParser()
+vat.optionxform = str
 
 config['REQUIRED_COLUMNS'] = {
 	'DATE': 'A',

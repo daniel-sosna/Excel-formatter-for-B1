@@ -4,7 +4,13 @@ from openpyxl.styles import Font, Alignment
 from datetime import datetime
 
 from utils import col_to_ind, try_save_wb
-from config_reader import VARIABLES, CONSTANTS, TEMPLATE_PATH, SALES_OUTPUT, TEMPLATE_OUTPUT
+try:
+	from config_reader import VARIABLES, CONSTANTS, TEMPLATE_PATH, SALES_OUTPUT, TEMPLATE_OUTPUT
+except Exception as e:
+	print("[‼] Failed to import config. See the error below:")
+	print(type(e), e)
+	input("\nPress Enter to exit...")
+	exit()
 
 
 class LoadWorkbook():
