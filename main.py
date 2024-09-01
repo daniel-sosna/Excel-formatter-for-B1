@@ -1,7 +1,6 @@
 from utils import col_to_ind
 from export_data import LoadWorkbook, SaveData
-from vat import EU_VAT
-from config import DATE_COL, COUNTRY_COL, TOTAL_COL
+from config_reader import EU_VAT, DATE_COL, COUNTRY_COL, TOTAL_COL
 
 
 class DataExtractor():
