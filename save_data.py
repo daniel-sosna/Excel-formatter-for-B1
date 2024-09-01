@@ -22,7 +22,7 @@ class LoadWorkbook():
 				print(f"[‼] Failed to open \"{filename}\". See the error below and close the file if it is open.")
 				print(type(e), e)
 				print("\nPlease press Enter to try again or enter other filename:")
-				new_filename = input("» ")
+				new_filename = input("» ").strip('"')
 				if new_filename:
 					filename = new_filename
 			else:
@@ -109,7 +109,7 @@ class SaveData():
 		
 		print("[?] Enter the path (filename if the file is in the same folder) to the TEMPLATE FILE or drag it into this window.")
 		print(f"Or press Enter to use the default value (\"{TEMPLATE_PATH}\").")
-		template = input("» ")
+		template = input("» ").strip('"')
 		template_filename = template if template else TEMPLATE_PATH
 		FillOutTemplateFile(template_filename, f'{TEMPLATE_OUTPUT}_{SALES_YEAR}-{SALES_MONTH}.xlsx', not_EU_sales)
 
@@ -125,6 +125,6 @@ class SaveData():
 		year = input("» ")
 
 		return (
-			year if month else prev_year,
+			year if year else prev_year,
 			month if month else prev_month
 		)

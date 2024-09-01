@@ -28,7 +28,7 @@ def print_title():
 def runner():
 	print_title()
 	print("[?] Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window:")
-	input_filename = input("» ")
+	input_filename = input("» ").strip('"')
 	try:
 		wb = LoadWorkbook(input_filename, True)
 		ext = DataExtractor(wb.sheet, DATE_COL, COUNTRY_COL, TOTAL_COL)
