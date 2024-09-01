@@ -4,7 +4,13 @@ from openpyxl.styles import Font, Alignment
 from datetime import datetime
 
 from utils import col_to_ind, try_save_wb
-from config import *
+try:
+	from config_reader import VARIABLES, CONSTANTS, TEMPLATE_PATH, SALES_OUTPUT, TEMPLATE_OUTPUT
+except Exception as e:
+	print("[‼] Failed to import config. See the error below:")
+	print(type(e), e)
+	input("\nPress Enter to exit...")
+	exit()
 
 
 class LoadWorkbook():
@@ -99,13 +105,13 @@ class SaveData():
 	def __init__(self, all_sales, EU_sales, not_EU_sales):
 		print("# Saving modified sales data:")
 		(SALES_YEAR, SALES_MONTH) = self.yy_mm_input()
-		WriteSalesToExcel(f'{SALES_OUTPUT}{SALES_YEAR}-{SALES_MONTH}.xlsx', all_sales, EU_sales, not_EU_sales)
+		WriteSalesToExcel(f'{SALES_OUTPUT}_{SALES_YEAR}-{SALES_MONTH}.xlsx', all_sales, EU_sales, not_EU_sales)
 		
 		print("[?] Enter the path (filename if the file is in the same folder) to the TEMPLATE FILE or drag it into this window.")
 		print(f"Or press Enter to use the default value (\"{TEMPLATE_PATH}\").")
-		template = input("» ")
+		template = input("» ").strip('"')
 		template_filename = template if template else TEMPLATE_PATH
-		FillOutTemplateFile(template_filename, f'{TEMPLATE_OUTPUT}{SALES_YEAR}-{SALES_MONTH}.xlsx', not_EU_sales)
+		FillOutTemplateFile(template_filename, f'{TEMPLATE_OUTPUT}_{SALES_YEAR}-{SALES_MONTH}.xlsx', not_EU_sales)
 
 	def yy_mm_input(self):
 		d = datetime.now()
@@ -119,6 +125,6 @@ class SaveData():
 		year = input("» ")
 
 		return (
-			year if month else prev_year,
+			year if year else prev_year,
 			month if month else prev_month
 		)
