@@ -27,12 +27,25 @@ def print_title():
 
 def runner():
 	print_title()
-	print("[?] Enter the path (filename if the file is in the same folder) to the SALES REPORT FILE or drag it into this window:")
-	input_filename = input("» ").strip('"')
+	print("[?] Enter SALES REPORT FILEs (or drag them into this window) one by one:")
 	try:
-		wb = LoadWorkbook(input_filename, True)
-		ext = DataExtractor(wb.sheet, DATE_COL, COUNTRY_COL, TOTAL_COL)
-		data, status = ext.run()
+		# Join data from multiple files
+		file_number = 1
+		data = []
+		while True:
+			print(f"\n[?] Enter file Nr.{file_number} (or press Enter if no more):")
+			input_filename = input("» ").strip('"')
+			if not input_filename:
+				break
+			wb = LoadWorkbook(input_filename, True)
+			ext = DataExtractor(wb.sheet, DATE_COL, COUNTRY_COL, TOTAL_COL)
+			data_part, status = ext.run()
+			if status:
+				data.extend(data_part)
+			else:
+				break
+			file_number += 1
+		# Process and save data
 		if status:
 			sales = SplitSalesByCountry(data, EU_VAT)
 			SaveData(data, sales.eu, sales.not_eu)
