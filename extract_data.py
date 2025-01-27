@@ -86,7 +86,7 @@ class DataExtractor():
         return (new_date, country, total), is_row_valid
 
     def print_results(self, n_rows_listened, n_rows_valid, n_rows_skipped, n_errors):
-        print("# Extraction from Excel results:")
+        print("\n# Extraction from Excel results:")
         print(f"{n_rows_listened} rows have been listened.")
         print(f" ├─ {n_rows_skipped} rows without data skipped.")
         print(f" └─ {n_rows_valid + n_errors} rows have been parsed.")

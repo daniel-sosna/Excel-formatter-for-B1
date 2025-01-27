@@ -89,14 +89,24 @@ class FillOutTemplateFile():
 	def fill(self, template_filename, result_filename):
 		wb = LoadWorkbook(template_filename)
 
-		for i, (date, country, price) in enumerate(self.sales, start=1):
-			wb.sheet.cell(row=i+1, column=col_to_ind(VARIABLES['date'], 1)).value = date
-			wb.sheet.cell(row=i+1, column=col_to_ind(VARIABLES['number'], 1)).value = i
-			wb.sheet.cell(row=i+1, column=col_to_ind(VARIABLES['country'], 1)).value = country
-			wb.sheet.cell(row=i+1, column=col_to_ind(VARIABLES['price'], 1)).value = price
+		# Get the index to start from
+		print("[?] Enter the NUMBER you want sales to start from.")
+		print(f"Or press Enter to use the default value (1).")
+		index_start = input("» ")
+		try:
+			index_start = int(index_start)
+		except:
+			index_start = 1
+
+		# Fill out the template
+		for row, (date, country, price) in enumerate(self.sales, start=2):
+			wb.sheet.cell(row=row, column=col_to_ind(VARIABLES['date'], 1)).value = date
+			wb.sheet.cell(row=row, column=col_to_ind(VARIABLES['number'], 1)).value = row - 2 + index_start
+			wb.sheet.cell(row=row, column=col_to_ind(VARIABLES['country'], 1)).value = country
+			wb.sheet.cell(row=row, column=col_to_ind(VARIABLES['price'], 1)).value = price
 
 			for col, val in CONSTANTS.items():
-				wb.sheet.cell(row=i+1, column=col_to_ind(col, 1)).value = val
+				wb.sheet.cell(row=row, column=col_to_ind(col, 1)).value = val
 
 		try_save_wb(wb.workbook, "sales outside the EU using the template", result_filename)
 
@@ -106,7 +116,8 @@ class SaveData():
 		print("# Saving modified sales data:")
 		(SALES_YEAR, SALES_MONTH) = self.yy_mm_input()
 		WriteSalesToExcel(f'{SALES_OUTPUT}_{SALES_YEAR}-{SALES_MONTH}.xlsx', all_sales, EU_sales, not_EU_sales)
-		
+
+		print("# Filling out the template file:")
 		print("[?] Enter the path (filename if the file is in the same folder) to the TEMPLATE FILE or drag it into this window.")
 		print(f"Or press Enter to use the default value (\"{TEMPLATE_PATH}\").")
 		template = input("» ").strip('"')

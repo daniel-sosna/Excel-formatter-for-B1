@@ -19,5 +19,5 @@ def try_save_wb(workbook, title, filename):
 			if new_filename:
 				filename = new_filename
 		else:
-			print(f"[¤] Successfully saved {title} into \"{filename}\"")
+			print(f"[¤] Successfully saved {title} into \"{filename}\"\n")
 			break
