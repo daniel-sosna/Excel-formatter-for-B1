@@ -3,6 +3,7 @@ from utils import col_to_ind
 
 class DataExtractor():
     def __init__(self, sheet, DATE_COL, COUNTRY_COL, TOTAL_COL):
+        """ Initializes the DataExtractor with the given sheet and column names """
         self.sheet = sheet
         self.DATE_COL = DATE_COL
         self.COUNTRY_COL = COUNTRY_COL
@@ -13,6 +14,7 @@ class DataExtractor():
         print(f"Columns to parse: {self.headers[0]}, {self.headers[1]}, {self.headers[2]}\n")
 
     def run(self, start=2, stop=None) -> tuple[list, bool]:
+        """ Extracts data from the sheet and returns a sorted list of valid data and a status flag """
         data = []
         skipped_count = 0
         error_count = 0
@@ -37,7 +39,8 @@ class DataExtractor():
         return sorted(data, key=lambda x: x[0]), True if not error_count else False
 
     def get_row_data(self, i, row) -> tuple | None:
-        # Get needed columns data
+        """ Retrieves the data from the specified columns in the row """
+        # Get required data from the row
         date = row[col_to_ind(self.DATE_COL)]
         country = row[col_to_ind(self.COUNTRY_COL)]
         total = row[col_to_ind(self.TOTAL_COL)]
@@ -50,6 +53,7 @@ class DataExtractor():
         return (date, country, total)
 
     def check_data(self, i, date, country, total) -> tuple[tuple, bool]:
+        """ Validates the data in the row and returns the cleaned data and a validity flag """
         is_row_valid = True
 
         # [Sale Date]
@@ -86,8 +90,8 @@ class DataExtractor():
         return (new_date, country, total), is_row_valid
 
     def print_results(self, n_rows_listened, n_rows_valid, n_rows_skipped, n_errors):
-        print("\n# Extraction from Excel results:")
-        print(f"{n_rows_listened} rows have been listened.")
+        """ Prints the results of the data extraction """
+        print(f"\n{n_rows_listened} rows have been listened.")
         print(f" ├─ {n_rows_skipped} rows without data skipped.")
         print(f" └─ {n_rows_valid + n_errors} rows have been parsed.")
         if n_errors:

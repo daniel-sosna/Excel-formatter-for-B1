@@ -1,10 +1,12 @@
 class SplitSalesByCountry():
+    # Dictionaries to store sales data
     eu = dict()
     not_eu = list()
     eu_countries = dict()
     not_eu_countries = dict()
 
     def __init__(self, sales, EU_VAT):
+        """ Initialize with sales data and VAT rates """
         self.all = sales
         self.EU_VAT = EU_VAT
         self.split_sales()
@@ -12,6 +14,7 @@ class SplitSalesByCountry():
         self.print_results()
 
     def split_sales(self):
+        """ Split sales data into EU and non-EU """
         for row in self.all:
             country = row[1]
             if country in self.EU_VAT.keys():
@@ -28,6 +31,7 @@ class SplitSalesByCountry():
                 self.not_eu_countries[country] += 1
 
     def count_vat_for_eu(self):
+        """ Calculate VAT for EU countries """
         for country in self.eu.keys():
             total = self.eu[country]
             VAT_value = float(self.EU_VAT[country])
@@ -36,12 +40,14 @@ class SplitSalesByCountry():
             self.eu[country] = (without_vat, vat, total)
 
     def print_results(self):
-        print("# Sales summary:")
+        """ Print sales summary """
+        print("\n# Sales summary:")
         self.print_countries("EU", self.eu_countries)
         self.print_countries("not EU", self.not_eu_countries)
         print()
 
     def print_countries(self, title, countries):
+        """ Print sales data for each country """
         total = 0
         for n in countries.values():
             total += n
